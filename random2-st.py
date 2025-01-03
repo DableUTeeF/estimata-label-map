@@ -192,6 +192,7 @@ def main():
     first_st = ['ST013', 'ST014', 'ST016', 'ST017', 'ST020', 'ST021', 'ST022', 'ST023', 'ST025', 'ST026', 'ST028', 'ST029', 'ST030', 'ST032', 'ST033', 'ST035', 'ST036', 'ST037',
                 'ST038', 'ST039', 'ST042', 'ST043', 'ST044', 'ST045', 'ST046', 'ST048', 'ST049', 'ST051', 'ST052', 'ST053', 'ST054', 'ST055', 'ST057', 'ST058', 'ST059', 'ST060',
                 'ST061', 'ST062', 'ST064', 'ST065', 'ST067', 'ST068', 'ST069', 'ST070', 'ST071']
+    # first_st = ['ST014']
     for st in first_st:
         labels = np.reshape(all_labels[st], (2, 3))
         src = srcs.format(st)
@@ -201,9 +202,11 @@ def main():
             if not file.endswith('HEIC'):
                 continue
             fname = file.replace('.HEIC', '')
-            # if not file == 'IMG_2381.HEIC':
+            # if not file == 'IMG_2395.HEIC':
             #     continue
             image = Image.open(os.path.join(src, file))
+            ori_width = image.width
+            ori_height = image.height
             image = np.array(image)[..., ::-1]
             image = cv2.resize(image, None, None, 0.2, 0.2)
             found, rotatecode, ocr_out = foundtext(reader, image)
@@ -230,27 +233,32 @@ def main():
             if not (2.5 > rotation_angle > 1):
                 continue
 
-            image2 = image.copy()
-            for idx, line in enumerate(grids):
-                for i in range(2):
-                    # print(radian_diff(centers[line[i]], centers[line[i+1]]))
-                    image2 = cv2.line(image2, centers[line[i]], centers[line[i+1]], (idx * 255, 0, 255 - idx * 255), 10)
-                    image2 = cv2.line(image2, centers[line[i]], centers[line[i+1]], (i * 255, i * 255, i * 255), 2)
-
             line_indice = np.argsort(grid_centers[..., 1].mean(1))
+            image2 = image.copy()
             os.makedirs(os.path.join(dst, 'outs', fname), exist_ok=True)
-            for i in line_indice:
-                line_centers = grid_centers[i]
-                line_idx = indices[i]
+            for i, k in enumerate(line_indice):
+                line_centers = grid_centers[k]
+                line_idx = indices[k]
                 if line_centers[0, 0] > line_centers[2, 0]:
                     line_centers = line_centers[::-1]
                     line_idx = line_idx[::-1]
+                for j in range(2):
+                    image2 = cv2.line(image2, line_centers[j], line_centers[j+1], (i * 255, 0, 255 - i * 255), 10)
+
                 for j in range(3):
                     blackwhite = np.zeros((image.shape[0], image.shape[1]), dtype='uint8')
                     contour = all_contours[line_idx[j]]
                     label = labels[i, j]
                     center = line_centers[j]
                     blackwhite = cv2.drawContours(blackwhite, [contour], -1, 255, -1)
+                    if rotatecode == cv2.ROTATE_90_COUNTERCLOCKWISE:
+                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_CLOCKWISE)
+                    elif rotatecode == cv2.ROTATE_90_CLOCKWISE:
+                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                    elif rotatecode == cv2.ROTATE_180:
+                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_180)
+                    blackwhite = cv2.resize(blackwhite, (ori_width, ori_height), interpolation=cv2.INTER_NEAREST)
+
                     cv2.imwrite(os.path.join(dst, 'outs', fname, f'{i}_{j}_{label}.png'), blackwhite)
                     image2 = cv2.putText(image2, f'{i * 3 + j}', (center[0] - 15, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
                     image2 = cv2.putText(image2, f'{label}ml', (center[0] - 15, center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
