@@ -56,6 +56,9 @@ def delta(a, b):
     return True
 
 def get_all_contours(image):
+    """
+        todo: better detection algorithm than this would be great
+    """
     hue = 80, 130
     sat = 90
     hsvim = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -103,6 +106,9 @@ def get_distances(centers):
 
 
 def get_line_grid(length_argsort, indices):
+    """
+        todo: try find parallel lines, see ST022/IMG_8404
+    """
     grids = []
     existing = set()
     for idx in length_argsort:

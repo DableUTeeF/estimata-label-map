@@ -153,7 +153,6 @@ def calculate_lines_length(centers, distances):
                     angle14 = angle_between(centers[i1], centers[i4])
                     angle24 = angle_between(centers[i2], centers[i4])
                     angle34 = angle_between(centers[i3], centers[i4])
-                    # todo: change to only the last angle instead of all
                     if delta(angle12, angle14) or delta(angle12, angle24) or delta(angle12, angle34):
                         continue
                     if delta(angle23, angle24) or delta(angle23, angle34):
@@ -239,7 +238,7 @@ def main():
             #     continue
             image = Image.open(os.path.join(src, file))
             image = np.array(image)[..., ::-1]
-            image = cv2.resize(image, None, None, 0.2, 0.2)  # todo: need to do something about size too
+            image = cv2.resize(image, None, None, 0.2, 0.2)
 
             all_contours = get_all_contours(image)
             if len(all_contours) < 25:
