@@ -251,7 +251,7 @@ def main():
                     label = labels[i, j]
                     center = line_centers[j]
                     blackwhite = cv2.drawContours(blackwhite, [contour], -1, 255, -1)
-                    cv2.imwrite(os.path.join(dst, fname, f'{i}_{j}_{label}.png'), blackwhite)
+                    cv2.imwrite(os.path.join(dst, 'outs', fname, f'{i}_{j}_{label}.png'), blackwhite)
                     image2 = cv2.putText(image2, f'{i * 3 + j}', (center[0] - 15, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
                     image2 = cv2.putText(image2, f'{label}ml', (center[0] - 15, center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
 
