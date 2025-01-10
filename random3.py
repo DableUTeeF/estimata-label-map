@@ -243,8 +243,8 @@ def drawgrid(line_indice, image, indices, all_contours, labels, folder, outputs,
             outputs['row'].append(i)
             outputs['column'].append(j)
             outputs['ml'].append(label)
-            outputs['x'].append((contour[:, 0].min()) * 5)  # todo: keep ratio here
-            outputs['w'].append((contour[:, 0].max() - contour[:, 1].min()) * 5)
+            outputs['x'].append((contour[:, 0].min()) * 5)
+            outputs['w'].append((contour[:, 0].max() - contour[:, 0].min()) * 5)
             outputs['y'].append((contour[:, 1].min()) * 5)
             outputs['h'].append((contour[:, 1].max() - contour[:, 1].min()) * 5)
     return outputs, image2
@@ -276,12 +276,12 @@ def get_path_indices(big_patch_centers, vertical, mode):
 
 def draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, outputs, vertical, mode):
     patch_indice = get_path_indices(big_patch_centers, vertical, mode)
-    for i in patch_indice:
-        contour = big_contours[i]
+    for i, k in enumerate(patch_indice):
+        contour = big_contours[k]
         if len(contour.shape) == 3:
             contour = contour[:, 0]
         label = labels[folder]['big'][i]
-        center = big_patch_centers[i]
+        center = big_patch_centers[k]
         image2 = cv2.putText(image2, f'{i}', (center[0] - 15, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
         image2 = cv2.putText(image2, f'{label}ml', (center[0] - 15, center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
         if vertical:
@@ -294,43 +294,28 @@ def draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, ou
         outputs['row'].append(row)
         outputs['column'].append(col)
         outputs['ml'].append(label)
-        outputs['x'].append((contour[:, 0].min()) * 5)  # todo: keep ratio here
-        outputs['w'].append((contour[:, 0].max() - contour[:, 1].min()) * 5)
+        outputs['x'].append((contour[:, 0].min()) * 5)
+        outputs['w'].append((contour[:, 0].max() - contour[:, 0].min()) * 5)
         outputs['y'].append((contour[:, 1].min()) * 5)
         outputs['h'].append((contour[:, 1].max() - contour[:, 1].min()) * 5)
     return outputs, image2
 
 
 def main():
-    srcs = '/mnt/d/work/estimata/Random 3/{}/{}'
-    dsts = '/mnt/d/work/estimata/Output 3/{}/{}'
-    # df = pd.read_excel('/mnt/d/work/estimata/random3.xlsx')
-    # st = []
-    # curr_st = None
-    # for i, row in df.iterrows():
-    #     if isinstance(row['ST'], str):
-    #         curr_st = row['ST']
-    #     st.append(curr_st)
-    # df['ST'] = st
-    #
-    # label1 = np.zeros((5, 5))
-    # label2 = []
-    # for i, row in df.iterrows():
-    #     if row['ST'] != 'ST001':
-    #         break
-    #     for j in range(1, 6):
-    #         label1[i, j-1] = row.values[j]
-    #     if not np.isnan(row.values[6]):
-    #         label2.append(row.values[6])
+    srcs = '/media/palm/Data/Estimata/Random 3/{}/{}'
+    dsts = '/media/palm/Data/Estimata/Output 3/{}/{}'
 
-    stations = ['STATION 1']
+    stations = [f'STATION {i}' for i in range(1, 10)]
     for st in stations:
-        df = pd.read_excel('/mnt/d/work/estimata/random3.xlsx', sheet_name=st)
+        df = pd.read_excel('/media/palm/Data/Estimata/Random3.xlsx', sheet_name=st)
         labels = {}
         for i in range(len(df) // 2):
             if np.isnan(df.values[i * 2, 5]):
                 continue
-            folder = os.path.join(df.values[i * 2, 1], df.values[i * 2, 2])
+            if 'A/B' in df.columns:
+                folder = os.path.join(df.values[i * 2, 1], df.iloc[i*2]['A/B'])
+            else:
+                folder = os.path.join(df.values[i * 2, 1], df.values[i * 2, 2])
             big = [df.values[i * 2, 3]]
             if df.values.shape[1] == 10:
                 big.append(df.values[i * 2, 4])
@@ -351,16 +336,15 @@ def main():
         for folder in labels:
             src = srcs.format(st, folder)
             dst = dsts.format(st, folder)
+            if not os.path.exists(src):
+                continue
             os.makedirs(dst, exist_ok=True)
             for file in os.listdir(src):
                 if not file.endswith('jpeg'):
                     continue
-                if not file == '1924IMG_3484.jpeg':
-                    continue
-                fname = file.replace('.jpeg', '')
+                # if not file == '1596IMG_0504.jpeg':
+                #     continue
                 image = Image.open(os.path.join(src, file))
-                ori_width = image.width
-                ori_height = image.height
                 image = np.array(image)[..., ::-1]
                 image = cv2.resize(image, None, None, 0.2, 0.2)
 
@@ -399,7 +383,9 @@ def main():
                     line_indice = np.argsort(grid_centers[..., 0].mean(1))
                     outputs, image2 = drawgrid(line_indice, image, indices, all_contours, labels, folder, outputs, grid_centers, mode=3)
                     outputs, image2 = draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, outputs, vertical, mode=3)
-                cv2.imwrite(os.path.join(dst, file.replace('HEIC', 'jpg')), image2)
+                cv2.imwrite(os.path.join(dst, file.replace('jpeg', 'jpg')), image2)
+                outputs = pd.DataFrame(outputs)
+                outputs.to_csv(os.path.join(dst, file.replace('jpeg', 'csv')), index=False)
 
 
 if __name__ == '__main__':

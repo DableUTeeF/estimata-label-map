@@ -204,6 +204,7 @@ def main():
         src = srcs.format(st)
         dst = dsts.format(st)
         os.makedirs(os.path.join(dst, 'grids'), exist_ok=True)
+        os.makedirs(os.path.join(dst, 'csv'), exist_ok=True)
         for file in os.listdir(src):
             if not file.endswith('HEIC'):
                 continue
@@ -241,10 +242,11 @@ def main():
 
             line_indice = np.argsort(grid_centers[..., 1].mean(1))
             image2 = image.copy()
+            outputs = {'row': [], 'column': [], 'ml': [], 'x': [], 'y': [], 'w': [], 'h': []}
             os.makedirs(os.path.join(dst, 'outs', fname), exist_ok=True)
             for i, k in enumerate(line_indice):
                 line_centers = grid_centers[k]
-                line_idx = indices[k]
+                line_idx = grids[k]
                 if line_centers[0, 0] > line_centers[2, 0]:
                     line_centers = line_centers[::-1]
                     line_idx = line_idx[::-1]
@@ -256,20 +258,30 @@ def main():
                     contour = all_contours[line_idx[j]]
                     label = labels[i, j]
                     center = line_centers[j]
-                    blackwhite = cv2.drawContours(blackwhite, [contour], -1, 255, -1)
-                    if rotatecode == cv2.ROTATE_90_COUNTERCLOCKWISE:
-                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_CLOCKWISE)
-                    elif rotatecode == cv2.ROTATE_90_CLOCKWISE:
-                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                    elif rotatecode == cv2.ROTATE_180:
-                        blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_180)
-                    blackwhite = cv2.resize(blackwhite, (ori_width, ori_height), interpolation=cv2.INTER_NEAREST)
-
-                    cv2.imwrite(os.path.join(dst, 'outs', fname, f'{i}_{j}_{label}.png'), blackwhite)
+                    # blackwhite = cv2.drawContours(blackwhite, [contour], -1, 255, -1)
+                    # if rotatecode == cv2.ROTATE_90_COUNTERCLOCKWISE:
+                    #     blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_CLOCKWISE)
+                    # elif rotatecode == cv2.ROTATE_90_CLOCKWISE:
+                    #     blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                    # elif rotatecode == cv2.ROTATE_180:
+                    #     blackwhite = cv2.rotate(blackwhite, cv2.ROTATE_180)
+                    # blackwhite = cv2.resize(blackwhite, (ori_width, ori_height), interpolation=cv2.INTER_NEAREST)
+                    #
+                    # cv2.imwrite(os.path.join(dst, 'outs', fname, f'{i}_{j}_{label}.png'), blackwhite)
                     image2 = cv2.putText(image2, f'{i * 3 + j}', (center[0] - 15, center[1]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
                     image2 = cv2.putText(image2, f'{label}ml', (center[0] - 15, center[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, 2)
 
+                    outputs['row'].append(i)
+                    outputs['column'].append(j)
+                    outputs['ml'].append(label)
+                    outputs['x'].append((contour[:, 0, 0].min()) * 5)
+                    outputs['w'].append((contour[:, 0, 0].max() - contour[:, 0, 0].min()) * 5)
+                    outputs['y'].append((contour[:, 0, 1].min()) * 5)
+                    outputs['h'].append((contour[:, 0, 1].max() - contour[:, 0, 1].min()) * 5)
+
             cv2.imwrite(os.path.join(dst, 'grids', file.replace('HEIC', 'jpg')), image2)
+            outputs = pd.DataFrame(outputs)
+            outputs.to_csv(os.path.join(dst, 'csv', file.replace('HEIC', 'csv')), index=False)
 
 
 if __name__ == '__main__':
