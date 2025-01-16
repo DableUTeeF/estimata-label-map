@@ -305,7 +305,8 @@ def main():
     srcs = '/media/palm/Data/Estimata/Random 3/{}/{}'
     dsts = '/media/palm/Data/Estimata/Output 3/{}/{}'
 
-    stations = [f'STATION {i}' for i in range(1, 10)]
+    # stations = [f'STATION {i}' for i in range(1, 10)]
+    stations = ['STATION 9']
     for st in stations:
         df = pd.read_excel('/media/palm/Data/Estimata/Random3.xlsx', sheet_name=st)
         labels = {}
@@ -318,9 +319,15 @@ def main():
                 folder = os.path.join(df.values[i * 2, 1], df.values[i * 2, 2])
             big = [df.values[i * 2, 3]]
             if df.values.shape[1] == 10:
-                big.append(df.values[i * 2, 4])
-                small = [df.values[i * 2, 5:10], df.values[i * 2 + 1, 5:10]]
-                vertical = False
+                if 'A/B' not in df.columns:
+                    big.append(df.values[i * 2, 4])
+                    small = [df.values[i * 2, 5:10], df.values[i * 2 + 1, 5:10]]
+                    vertical = False
+                else:
+                    big = [df.values[i * 2, 4], df.values[i * 2 + 1, 4]]
+                    small = [df.values[i * 2, 5:10], df.values[i * 2 + 1, 5:10]]
+                    vertical = True
+
             elif df.values.shape[1] == 9:
                 big.append(df.values[i * 2 + 1, 3])
                 small = [df.values[i * 2, 4:9], df.values[i * 2 + 1, 4:9]]
@@ -340,9 +347,9 @@ def main():
                 continue
             os.makedirs(dst, exist_ok=True)
             for file in os.listdir(src):
-                if not file.endswith('jpeg'):
+                if not file.endswith('jpeg') and not file.endswith('jpg'):
                     continue
-                # if not file == '1596IMG_0504.jpeg':
+                # if not file == '8194IMG20240811164656.jpg':
                 #     continue
                 image = Image.open(os.path.join(src, file))
                 image = np.array(image)[..., ::-1]
@@ -375,7 +382,7 @@ def main():
                     outputs, image2 = drawgrid(line_indice, image, indices, all_contours, labels, folder, outputs, grid_centers, mode=1)
                     outputs, image2 = draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, outputs, vertical, mode=1)
 
-                elif math.pi / 4 < abs(rotation_angle) < math.pi / 4 * 3:
+                elif math.pi / 4 < rotation_angle < math.pi / 4 * 3:
                     line_indice = np.argsort(grid_centers[..., 0].mean(1))[::-1]
                     outputs, image2 = drawgrid(line_indice, image, indices, all_contours, labels, folder, outputs, grid_centers, mode=2)
                     outputs, image2 = draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, outputs, vertical, mode=2)
@@ -383,9 +390,11 @@ def main():
                     line_indice = np.argsort(grid_centers[..., 0].mean(1))
                     outputs, image2 = drawgrid(line_indice, image, indices, all_contours, labels, folder, outputs, grid_centers, mode=3)
                     outputs, image2 = draw_big_patches(image2, big_contours, big_patch_centers, labels, folder, outputs, vertical, mode=3)
-                cv2.imwrite(os.path.join(dst, file.replace('jpeg', 'jpg')), image2)
+                image2 = Image.fromarray(image2[..., ::-1])
+                image2.save(os.path.join(dst, file))
+                # cv2.imwrite(os.path.join(dst, file.replace('jpeg', 'jpg')), image2)
                 outputs = pd.DataFrame(outputs)
-                outputs.to_csv(os.path.join(dst, file.replace('jpeg', 'csv')), index=False)
+                outputs.to_csv(os.path.join(dst, file.replace('jpg', 'csv')), index=False)
 
 
 if __name__ == '__main__':
